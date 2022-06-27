@@ -90,7 +90,7 @@ class LeakyReLU(ActivationBase):
         super().__init__()
 
     def __str__(self):
-        return "Leaky ReLU(alpha={})".format(self.alpha)
+        return f"Leaky ReLU(alpha={self.alpha})"
 
     def forward(self, z):
         _z = z.copy()
@@ -114,7 +114,7 @@ class Affine(ActivationBase):
         super().__init__()
 
     def __str__(self):
-        return "Affine(slope={}, intercept={})".format(self.slope, self.intercept)
+        return f"Affine(slope={self.slope}, intercept={self.intercept})"
 
     def forward(self, z):
         return self.slope * z + self.intercept
@@ -153,7 +153,7 @@ class ELU(ActivationBase):
         super().__init__()
 
     def __str__(self):
-        return "ELU(alpha={})".format(self.alpha)
+        return f"ELU(alpha={self.alpha})"
 
     def forward(self, z):
         return np.where(z > 0, z, self.alpha * (np.exp(z) - 1))
@@ -248,5 +248,5 @@ class ActivationInitializer(object):
             alpha = re.match(r, acti_str).groups()[0]
             acti_fn = LeakyReLU(float(alpha))
         else:
-            raise ValueError("Unknown activation: {}".format(acti_str))
+            raise ValueError(f"Unknown activation: {acti_str}")
         return acti_fn

@@ -12,12 +12,12 @@ def calc_fan(weight_shape):
     """
     if len(weight_shape) == 2:  
         fan_in, fan_out = weight_shape
-    elif len(weight_shape) in [3, 4]:
+    elif len(weight_shape) in {3, 4}:
         in_ch, out_ch = weight_shape[-2:]
         kernel_size = np.prod(weight_shape[:-2])
         fan_in, fan_out = in_ch * kernel_size, out_ch * kernel_size
     else:
-        raise ValueError("Unrecognized weight dimension: {}".format(weight_shape))
+        raise ValueError(f"Unrecognized weight dimension: {weight_shape}")
     return fan_in, fan_out
 
 
@@ -216,7 +216,7 @@ class WeightInitializer(object):
         r = r"([a-zA-Z]*)=([^,)]*)"
         mode_str = self.mode.lower()
         kwargs = dict([(i, eval(j)) for (i, j) in re.findall(r, mode_str)])
-        
+
         if "random_uniform" in mode_str:
             self.init_fn = random_uniform(**kwargs)
         elif "random_normal" in mode_str:
@@ -230,8 +230,7 @@ class WeightInitializer(object):
         elif "glorot_normal" in mode_str:
             self.init_fn = glorot_normal(**kwargs)
         else:
-            raise ValueError("Unrecognize initialization mode: {}".format(mode_str))
+            raise ValueError(f"Unrecognize initialization mode: {mode_str}")
     
     def __call__(self, weight_shape):
-        W = self.init_fn(weight_shape)
-        return W
+        return self.init_fn(weight_shape)

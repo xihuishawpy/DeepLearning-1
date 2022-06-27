@@ -88,8 +88,7 @@ class BatchNorm1D(LayerBase):
             self.X.append(X)
 
         X_hat = (X - X_mean) / np.sqrt(X_var + epsi)
-        y = scaler * X_hat + intercept
-        return y
+        return scaler * X_hat + intercept
 
     def backward(self, dLda, retain_grads=True):
         """
@@ -121,11 +120,11 @@ class BatchNorm1D(LayerBase):
         n_ex, n_in = X.shape
         X_mean, X_var = X.mean(axis=0), X.var(axis=0)
         X_hat = (X - X_mean) / np.sqrt(X_var + epsi)
-        
+
         dIntercept = dLda.sum(axis=0)
         dScaler = np.sum(dLda * X_hat, axis=0)
         dX_hat = dLda * scaler
-        
+
         dX = (n_ex * dX_hat - dX_hat.sum(axis=0) - X_hat * (dX_hat * X_hat).sum(axis=0)) / (
             n_ex * np.sqrt(X_var + epsi)
         )

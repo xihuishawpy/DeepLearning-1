@@ -28,8 +28,7 @@ class NaiveBayes():
         """
         先验函数。
         """
-        frequency = np.mean(self.y == c)
-        return frequency
+        return np.mean(self.y == c)
 
     def _calculate_likelihood(self, mean, var, X):
         """
@@ -55,13 +54,11 @@ class NaiveBayes():
         return self.classes[np.argmax(posteriors)]
     
     def predict(self, X):
-        y_pred = [self._calculate_probabilities(sample) for sample in X]
-        return y_pred
+        return [self._calculate_probabilities(sample) for sample in X]
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
 
 ########-----LogisticRegression------#########
@@ -84,20 +81,18 @@ class LogisticRegression():
     def fit(self, X, y, n_iterations=4000):
         self._initialize_parameters(X)
         # 参数theta的迭代更新
-        for i in range(n_iterations):
+        for _ in range(n_iterations):
             # 求预测
             y_pred = self.sigmoid(X.dot(self.param))
             # 最小化损失函数，参数更新公式
             self.param -= self.learning_rate * -(y - y_pred).dot(X)
 
     def predict(self, X):
-        y_pred = self.sigmoid(X.dot(self.param))
-        return y_pred
+        return self.sigmoid(X.dot(self.param))
 
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
     
 
 ########-----SupportVectorMachine------#########
@@ -193,18 +188,20 @@ class SupportVectorMachine():
         y_pred = []
         for sample in X:
             # 对于输入的x, 计算f(x)
-            prediction = 0
-            for i in range(len(self.lagr_multipliers)):
-                prediction += self.lagr_multipliers[i] * self.support_vector_labels[
-                    i] * self.kernel(self.support_vectors[i], sample)
+            prediction = sum(
+                self.lagr_multipliers[i]
+                * self.support_vector_labels[i]
+                * self.kernel(self.support_vectors[i], sample)
+                for i in range(len(self.lagr_multipliers))
+            )
+
             prediction += self.intercept
             y_pred.append(np.sign(prediction))
         return np.array(y_pred)
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
     
 ########-----KNN------#########
@@ -225,36 +222,25 @@ class KNN():
         dist = dist + np.sum(np.square(self._datas), axis=1, keepdims=True).T
         dist = np.argsort(dist)[:,:self._k]
         return np.array([np.argmax(np.bincount(self._labels[dist][i])) for i in range(len(X))])
-        idx = lagr_mult > 1e-7
-        # alpha值
-        self.lagr_multipliers = lagr_mult[idx]
-        # 支持向量
-        self.support_vectors = X[idx]
-        # 支持向量的标签
-        self.support_vector_labels = y[idx]
-
-        # 通过第一个支持向量计算b
-        self.intercept = self.support_vector_labels[0]
-        for i in range(len(self.lagr_multipliers)):
-            self.intercept -= self.lagr_multipliers[i] * self.support_vector_labels[
-                i] * self.kernel(self.support_vectors[i], self.support_vectors[0])
 
     def predict(self, X):
         y_pred = []
         for sample in X:
             # 对于输入的x, 计算f(x)
-            prediction = 0
-            for i in range(len(self.lagr_multipliers)):
-                prediction += self.lagr_multipliers[i] * self.support_vector_labels[
-                    i] * self.kernel(self.support_vectors[i], sample)
+            prediction = sum(
+                self.lagr_multipliers[i]
+                * self.support_vector_labels[i]
+                * self.kernel(self.support_vectors[i], sample)
+                for i in range(len(self.lagr_multipliers))
+            )
+
             prediction += self.intercept
             y_pred.append(np.sign(prediction))
         return np.array(y_pred)
 
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
     
 ########-----DecisionTree------#########
@@ -274,7 +260,7 @@ def divide_on_feature(X, feature_i, threshold):
     依据切分变量和切分点，将数据集分为两个子区域
     """
     split_func = None
-    if isinstance(threshold, int) or isinstance(threshold, float):
+    if isinstance(threshold, (int, float)):
         split_func = lambda sample: sample[feature_i] >= threshold
     else:
         split_func = lambda sample: sample[feature_i] == threshold
@@ -375,22 +361,21 @@ class DecisionTree(object):
         feature_value = x[tree.feature_i]
 
         branch = tree.false_branch
-        if isinstance(feature_value, int) or isinstance(feature_value, float):
-            if feature_value >= tree.threshold:
-                branch = tree.true_branch
-        elif feature_value == tree.threshold:
+        if (
+            isinstance(feature_value, (int, float))
+            and feature_value >= tree.threshold
+            or not isinstance(feature_value, (int, float))
+            and feature_value == tree.threshold
+        ):
             branch = tree.true_branch
-
         return self.predict_value(x, branch)
 
     def predict(self, X):
-        y_pred = [self.predict_value(sample) for sample in X]
-        return y_pred
+        return [self.predict_value(sample) for sample in X]
 
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
     
     def print_tree(self, tree=None, indent=" "):
         """
@@ -402,10 +387,10 @@ class DecisionTree(object):
         if tree.value is not None:
             print(tree.value)
         else:
-            print("feature|threshold -> %s | %s" % (tree.feature_i, tree.threshold))
-            print("%sT->" % (indent), end="")
+            print(f"feature|threshold -> {tree.feature_i} | {tree.threshold}")
+            print(f"{indent}T->", end="")
             self.print_tree(tree.true_branch, indent + indent)
-            print("%sF->" % (indent), end="")
+            print(f"{indent}F->", end="")
             self.print_tree(tree.false_branch, indent + indent)
 
 
@@ -422,11 +407,7 @@ def calculate_entropy(y):
 
 def calculate_gini(y):
     unique_labels = np.unique(y)
-    var = 0
-    for label in unique_labels:
-        count = len(y[y == label])
-        p = count / len(y)
-        var += p ** 2
+    var = sum((len(y[y == label]) / len(y))**2 for label in unique_labels)
     return 1 - var
 
 
@@ -440,10 +421,7 @@ class ClassificationTree(DecisionTree):
         """
         p = len(y1) / len(y)
         gini = calculate_gini(y)
-        gini_index = gini - p * \
-            calculate_gini(y1) - (1 - p) * \
-            calculate_gini(y2)
-        return gini_index
+        return gini - p * calculate_gini(y1) - (1 - p) * calculate_gini(y2)
     
     
     def _calculate_information_gain(self, y, y1, y2):
@@ -452,10 +430,9 @@ class ClassificationTree(DecisionTree):
         """
         p = len(y1) / len(y)
         entropy = calculate_entropy(y)
-        info_gain = entropy - p * \
-            calculate_entropy(y1) - (1 - p) * \
-            calculate_entropy(y2)
-        return info_gain
+        return (
+            entropy - p * calculate_entropy(y1) - (1 - p) * calculate_entropy(y2)
+        )
 
     def _majority_vote(self, y):
         """
@@ -482,8 +459,7 @@ def calculate_mse(y):
 
 def calculate_variance(y):
     n_samples = np.shape(y)[0]
-    variance = (1 / n_samples) * np.diag((y - np.mean(y)).T.dot(y - np.mean(y)))
-    return variance
+    return (1 / n_samples) * np.diag((y - np.mean(y)).T.dot(y - np.mean(y)))
 
 
 class RegressionTree(DecisionTree):
@@ -499,8 +475,7 @@ class RegressionTree(DecisionTree):
         mse_2 = calculate_mse(y2)
         frac_1 = len(y1) / len(y)
         frac_2 = len(y2) / len(y)
-        mse_reduction = mse_tot - (frac_1 * mse_1 + frac_2 * mse_2)
-        return mse_reduction
+        return mse_tot - (frac_1 * mse_1 + frac_2 * mse_2)
     
     def _calculate_variance_reduction(self, y, y1, y2):
         """
@@ -603,5 +578,3 @@ class KMeans():
                 centroids[j,:] = np.mean(pointsInCluster,axis=0)   # 对矩阵的行求均值
 
         return centroids,clusterAssment
-
-        return X_transformed

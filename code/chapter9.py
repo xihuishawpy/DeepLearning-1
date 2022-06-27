@@ -32,7 +32,7 @@ def calc_pad_dims_sameconv_2D(X_shape, out_dim, kernel_shape, stride, dilation=1
     # 校验，如不等 (right/bottom处) 添加不对称0填充
     out_rows1 = int(1 + (in_rows + 2 * pr - _fr) / stride)
     out_cols1 = int(1 + (in_cols + 2 * pc - _fc) / stride)
-    
+
     pr1, pr2 = pr, pr
     if out_rows1 == out_rows - 1:
         pr1, pr2 = pr, pr + 1
@@ -44,7 +44,7 @@ def calc_pad_dims_sameconv_2D(X_shape, out_dim, kernel_shape, stride, dilation=1
         pc1, pc2 = pc, pc + 1
     elif out_cols1 != out_cols:
         raise AssertionError
-        
+
     # 返回对 X 的 Padding 维数 (left, right, up, down)
     return (pr1, pr2, pc1, pc2)
 
@@ -235,7 +235,7 @@ def conv2D_gemm(X, W, stride=0, pad='same', dilation=1):
     pr1, pr2, pc1, pc2 = p
     fr, fc, in_ch, out_ch = W.shape
     n_samp, in_rows, in_cols, in_ch = X.shape
-    
+
     # 考虑扩张率
     _fr, _fc = fr + (fr-1) * (d-1), fc + (fc-1) * (d-1)
 
@@ -247,9 +247,11 @@ def conv2D_gemm(X, W, stride=0, pad='same', dilation=1):
     X_col, _ = im2col(X, W.shape, p, s, d)
     W_col = W.transpose(3, 2, 0, 1).reshape(out_ch, -1)
 
-    Z = (W_col @ X_col).reshape(out_ch, out_rows, out_cols, n_samp).transpose(3, 1, 2, 0)
-
-    return Z
+    return (
+        (W_col @ X_col)
+        .reshape(out_ch, out_rows, out_cols, n_samp)
+        .transpose(3, 1, 2, 0)
+    )
 
 
 ########### Conv2D ##################
@@ -358,7 +360,7 @@ class Conv2D(LayerBase):
         Xs, d = self.X, self.dilation
         (fr, fc), s, p = self.kernel_shape, self.stride, self.pad
         dXs = []
-        
+
         for X, Y, da in zip(Xs, Ys, dLda):
             n_samp, out_rows, out_cols, out_ch = da.shape
             X_pad, (pr1, pr2, pc1, pc2) = pad2D(X, p, self.kernel_shape, s, d)
@@ -391,7 +393,7 @@ class Conv2D(LayerBase):
             pr2 = None if pr2 == 0 else -pr2
             pc2 = None if pc2 == 0 else -pc2
             dXs.append(dX[:, pr1:pr2, pc1:pc2, :])
-            
+
         return dXs[0] if len(Xs) == 1 else dXs
     
     @property
@@ -568,7 +570,7 @@ class Conv2D_gemm(LayerBase):
         fr, fc, in_ch, out_ch = W.shape
         n_samp, out_rows, out_cols, out_ch = dLda.shape
         (fr, fc), s, p = self.kernel_shape, self.stride, self.pad
-        
+
         dLdy = dLda * self.acti_fn.grad(Y)
         dLdy_col = dLdy.transpose(3, 1, 2, 0).reshape(out_ch, -1)
         W_col = W.transpose(3, 2, 0, 1).reshape(out_ch, -1).T
@@ -714,7 +716,7 @@ class Pool2D(LayerBase):
                                 x, y = np.argwhere(xi == np.max(xi))[0]
                                 mask[x, y] = True
                                 dX[m, i0:i1, j0:j1, c] += mask * dy[m, i, j, c]
-                                
+
                             elif self.mode == "average":
                                 frame = np.ones((fr, fc)) * dy[m, i, j, c]
                                 dX[m, i0:i1, j0:j1, c] += frame / np.prod((fr, fc))
@@ -722,7 +724,7 @@ class Pool2D(LayerBase):
             pr2 = None if pr2 == 0 else -pr2
             pc2 = None if pc2 == 0 else -pc2
             dXs.append(dX[:, pr1:pr2, pc1:pc2, :])
-            
+
         return dXs[0] if len(Xs) == 1 else dXs
 
     @property
@@ -991,7 +993,7 @@ class LeNet(object):
     def evaluate(self, X_test, y_test, batch_size=128):
         acc = 0.0
         batch_generator, n_batch = minibatch(X_test, batch_size, shuffle=True)
-        for j, batch_idx in enumerate(batch_generator):
+        for batch_idx in batch_generator:
             batch_len, batch_start = len(batch_idx), time.time()
             X_batch, y_batch = X_test[batch_idx], y_test[batch_idx]
             y_pred_batch, _ = self.forward(X_batch)
@@ -1205,7 +1207,7 @@ class LeNet_gemm(object):
     def evaluate(self, X_test, y_test, batch_size=128):
         acc = 0.0
         batch_generator, n_batch = minibatch(X_test, batch_size, shuffle=True)
-        for j, batch_idx in enumerate(batch_generator):
+        for batch_idx in batch_generator:
             batch_len, batch_start = len(batch_idx), time.time()
             X_batch, y_batch = X_test[batch_idx], y_test[batch_idx]
             y_pred_batch, _ = self.forward(X_batch)

@@ -133,7 +133,7 @@ class FullyConnected(LayerBase):
         """
         if not isinstance(dLda, list):
             dLda = [dLda]
-        
+
         dX = []
         X = self.X
         for da, x in zip(dLda, X):
@@ -143,7 +143,7 @@ class FullyConnected(LayerBase):
             if retain_grads:
                 self.gradients["W"] += dw
                 self.gradients["b"] += db
-        
+
         return dX[0] if len(X) == 1 else dX
 
     def _bwd(self, dLda, X):
@@ -169,9 +169,7 @@ class FullyConnected(LayerBase):
             "optimizer": {
                 "hyperparams": self.optimizer.hyperparams,
             },
-            "components": {
-                k: v for k, v in self.params.items()
-            }
+            "components": dict(self.params.items()),
         }
     
     
@@ -246,14 +244,12 @@ class CrossEntropy(ObjectiveBase):
         """
         (n, _) = y_true.shape
         eps = np.finfo(float).eps  # 防止 np.log(0)
-        cross_entropy = -np.sum(y_true * np.log(y_pred + eps)) / n 
-        return cross_entropy
+        return -np.sum(y_true * np.log(y_pred + eps)) / n
     
     @staticmethod
     def grad(y_true, y_pred):
         (n, _) = y_true.shape
-        grad = (y_pred - y_true) / n
-        return grad
+        return (y_pred - y_true) / n
     
     
 def minibatch(X, batchsize=256, shuffle=True):
@@ -389,7 +385,7 @@ class DFN(object):
     def evaluate(self, X_test, y_test, batch_size=128):
         acc = 0.0
         batch_generator, n_batch = minibatch(X_test, batch_size, shuffle=True)
-        for j, batch_idx in enumerate(batch_generator):
+        for batch_idx in batch_generator:
             batch_len, batch_start = len(batch_idx), time.time()
             X_batch, y_batch = X_test[batch_idx], y_test[batch_idx]
             y_pred_batch, _ = self.forward(X_batch)
