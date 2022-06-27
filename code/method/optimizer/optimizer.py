@@ -33,7 +33,7 @@ class SGD(OptimizerBase):
         self.cache = {}
         
     def __str__(self):
-        return "SGD(lr={})".format(self.hyperparams["lr"])
+        return f'SGD(lr={self.hyperparams["lr"]})'
     
     def update(self, params, params_grad, params_name):
         update_value = self.lr * params_grad
@@ -62,7 +62,7 @@ class Momentum(OptimizerBase):
         self.cache = {}
 
     def __str__(self):
-        return "Momentum(lr={}, momentum={})".format(self.lr, self.momentum)
+        return f"Momentum(lr={self.lr}, momentum={self.momentum})"
 
     def update(self, param, param_grad, param_name):
         C = self.cache
@@ -98,7 +98,7 @@ class AdaGrad(OptimizerBase):
         self.cache = {}
 
     def __str__(self):
-        return "AdaGrad(lr={}, eps={})".format(self.lr, self.eps)
+        return f"AdaGrad(lr={self.lr}, eps={self.eps})"
 
     def update(self, param, param_grad, param_name):
         C = self.cache
@@ -139,9 +139,7 @@ class RMSProp(OptimizerBase):
         self.cache = {}
 
     def __str__(self):
-        return "RMSProp(lr={}, eps={}, decay={})".format(
-            self.lr, self.eps, self.decay
-        )
+        return f"RMSProp(lr={self.lr}, eps={self.eps}, decay={self.decay})"
 
     def update(self, param, param_grad, param_name):
         C = self.cache
@@ -184,7 +182,7 @@ class AdaDelta(OptimizerBase):
         self.cache = {}
 
     def __str__(self):
-        return "AdaDelta(eps={}, decay={})".format(self.eps, self.decay)
+        return f"AdaDelta(eps={self.eps}, decay={self.decay})"
 
     def update(self, param, param_grad, param_name):
         C = self.cache
@@ -237,9 +235,7 @@ class Adam(OptimizerBase):
         self.cache = {}
 
     def __str__(self):
-        return "Adam(lr={}, decay1={}, decay2={}, eps={})".format(
-            self.lr, self.decay1, self.decay2, self.eps
-        )
+        return f"Adam(lr={self.lr}, decay1={self.decay1}, decay2={self.decay2}, eps={self.eps})"
 
     def update(self, param, param_grad, param_name, cur_loss=None):
         C = self.cache
@@ -290,7 +286,7 @@ class OptimizerInitializer(ABC):
         if "sgd" in opti_str:
             optimizer = SGD(**kwargs)
         elif "momentum" in opti_str:
-            optimizer = Momentum(**kwargs)    
+            optimizer = Momentum(**kwargs)
         elif "adagrad" in opti_str:
             optimizer = AdaGrad(**kwargs)
         elif "rmsprop" in opti_str:
@@ -300,6 +296,6 @@ class OptimizerInitializer(ABC):
         elif "adam" in opti_str:
             optimizer = Adam(**kwargs)
         else:
-            raise NotImplementedError("{}".format(opt_str))
+            raise NotImplementedError(f"{opt_str}")
         return optimizer
         

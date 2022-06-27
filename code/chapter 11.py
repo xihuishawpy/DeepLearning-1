@@ -16,7 +16,7 @@ def cal_conf_matrix(labels, preds):
     preds：预测结果
     """
     n_sample = len(labels)
-    result = pd.DataFrame(index=range(0,n_sample),columns=('probability','label'))
+    result = pd.DataFrame(index=range(n_sample), columns=('probability','label'))
     result['label'] = np.array(labels)
     result['probability'] = np.array(preds)
     cm = np.arange(4).reshape(2,2)
@@ -43,7 +43,7 @@ def cal_PRcurve(labels, preds):
     计算PR曲线上的值。
     """
     n_sample = len(labels)
-    result = pd.DataFrame(index=range(0,n_sample),columns=('probability','label'))
+    result = pd.DataFrame(index=range(n_sample), columns=('probability','label'))
     y_pred[y_pred>=0.5] = 1
     y_pred[y_pred<0.5] = 0
     result['label'] = np.array(labels)
@@ -64,7 +64,7 @@ def cal_ROCcurve(labels, preds):
     计算ROC曲线上的值。
     """
     n_sample = len(labels)
-    result = pd.DataFrame(index=range(0,n_sample),columns=('probability','label'))
+    result = pd.DataFrame(index=range(n_sample), columns=('probability','label'))
     y_pred[y_pred>=0.5] = 1
     y_pred[y_pred<0.5] = 0
     result['label'] = np.array(labels)
@@ -146,8 +146,8 @@ class KernelBase(ABC):
 
     def __str__(self):
         P, H = self.params, self.hyperparams
-        p_str = ", ".join(["{}={}".format(k, v) for k, v in P.items()])
-        return "{}({})".format(H["op"], p_str)
+        p_str = ", ".join([f"{k}={v}" for k, v in P.items()])
+        return f'{H["op"]}({p_str})'
 
     def summary(self):
         return {
@@ -198,7 +198,7 @@ class KernelInitializer(object):
         if "rbf" in kr_str:
             kernel = RBFKernel(**kwargs)
         else:
-            raise NotImplementedError("{}".format(kr_str))
+            raise NotImplementedError(f"{kr_str}")
         return kernel
 
 
@@ -257,8 +257,7 @@ class BayesianOptimization:
     def acquisition_function(self, Xsamples):
         mu, _, cov = self.model.predict(Xsamples)
         mu = mu if mu.ndim==1 else (mu.T)[0]
-        ysample = np.random.multivariate_normal(mu, cov) 
-        return ysample
+        return np.random.multivariate_normal(mu, cov)
     
     def opt_acquisition(self, X, n_samples=20):
         # 样本搜索策略，一般方法有随机搜索、基于网格的搜索，或局部搜索
@@ -274,7 +273,7 @@ class BayesianOptimization:
         # 拟合 GPR 模型
         self.model.fit(X, y)
         # 优化过程
-        for i in range(15):
+        for _ in range(15):
             x_star = self.opt_acquisition(X)  # 下一个采样点
             y_star = f(x_star)
             mean, conf, cov = self.model.predict(np.array([[x_star]]))

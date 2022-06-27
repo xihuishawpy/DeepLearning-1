@@ -26,12 +26,12 @@ class L1Regularizer(RegularizerBase):
         self.lambd = lambd
     
     def loss(self, params):
-        loss = 0
         pattern = re.compile(r'^W\d+')
-        for key, val in params.items():
-            if pattern.match(key):
-                loss +=  0.5 * np.sum(np.abs(val)) * self.lambd
-        return loss
+        return sum(
+            0.5 * np.sum(np.abs(val)) * self.lambd
+            for key, val in params.items()
+            if pattern.match(key)
+        )
     
     def grad(self, params):
         for key, val in params.items():
@@ -45,10 +45,10 @@ class L2Regularizer(RegularizerBase):
         self.lambd = lambd
         
     def loss(self, params):
-        loss = 0
-        for key, val in params.items():
-            loss +=  0.5 * np.sum(np.square(val)) * self.lambd
-        return loss
+        return sum(
+            0.5 * np.sum(np.square(val)) * self.lambd
+            for key, val in params.items()
+        )
     
     def grad(self, params):
         for key, val in params.items():
@@ -64,12 +64,12 @@ class RegularizerInitializer(object):
         r = r"([a-zA-Z]*)=([^,)]*)"
         regular_str = self.regular_name.lower()
         kwargs = dict([(i, eval(j)) for (i, j) in re.findall(r, regular_str)])
-        if  "l1" in regular_str.lower():
+        if "l1" in regular_str.lower():
             regular = L1Regularizer(**kwargs)
         elif "l2" in regular_str.lower():
             regular = L2Regularizer(**kwargs)
         else:
-            raise ValueError("Unrecognized regular: {}".format(regular_str))
+            raise ValueError(f"Unrecognized regular: {regular_str}")
         return regular
     
 
@@ -173,10 +173,13 @@ def early_stopping(valid):
     参数说明：
     valid：验证集正确率列表
     """
-    if len(valid) > 5:
-        if valid[-1] < valid[-5] and valid[-2] < valid[-5] and valid[-3] < valid[-5] and valid[-4] < valid[-5]:
-            return True
-    return False
+    return (
+        len(valid) > 5
+        and valid[-1] < valid[-5]
+        and valid[-2] < valid[-5]
+        and valid[-3] < valid[-5]
+        and valid[-4] < valid[-5]
+    )
 
 
 #####---Bagging--#####
@@ -198,7 +201,7 @@ class BaggingModel(object):
     def fit(self, X, Y):
         self.models = []
         for i in range(self.n_models):
-            print("training {} base model:".format(i))
+            print(f"training {i} base model:")
             X_samp, Y_samp = bootstrap_sample(X, Y)
             model = DFN(hidden_dims_1=200, hidden_dims_2=10)
             model.fit(X_samp, Y_samp)
@@ -291,10 +294,7 @@ def get_random_subsets(X, y, n_subsets, replacements=True):
     Xy = np.concatenate((X, y.reshape((1, len(y))).T), axis=1)
     np.random.shuffle(Xy)
     subsets = []
-    # 如果抽样时不重复抽样，可以只使用 50% 的训练数据；如果抽样时可重复抽样，使用全部的训练数据，默认可重复抽样
-    subsample_size = int(n_samples // 2)
-    if replacements:
-        subsample_size = n_samples      
+    subsample_size = n_samples if replacements else int(n_samples // 2)
     for _ in range(n_subsets):
         idx = np.random.choice(
             range(n_samples),
@@ -319,13 +319,14 @@ class Bagging():
         self.progressbar = progressbar.ProgressBar(widgets=bar_widgets)
 
         # 初始化决策树
-        self.trees = []
-        for _ in range(n_estimators):
-            self.trees.append(
-                ClassificationTree(
-                    min_samples_split=self.min_samples_split,
-                    min_impurity=min_gain,
-                    max_depth=self.max_depth))
+        self.trees = [
+            ClassificationTree(
+                min_samples_split=self.min_samples_split,
+                min_impurity=min_gain,
+                max_depth=self.max_depth,
+            )
+            for _ in range(n_estimators)
+        ]
 
     def fit(self, X, y):
         # 对每棵树选择数据集的随机子集
@@ -342,17 +343,15 @@ class Bagging():
             # 基于特征做出预测
             prediction = tree.predict(X)
             y_preds[:, i] = prediction
-            
-        y_pred = []
-        # 对每个样本，选择最常见的类别作为预测
-        for sample_predictions in y_preds:
-            y_pred.append(np.bincount(sample_predictions.astype('int')).argmax())
-        return y_pred
+
+        return [
+            np.bincount(sample_predictions.astype('int')).argmax()
+            for sample_predictions in y_preds
+        ]
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
     
 #####----RandomForest----#######
@@ -370,13 +369,14 @@ class RandomForest():
         self.progressbar = progressbar.ProgressBar(widgets=bar_widgets)
 
         # 初始化决策树
-        self.trees = []
-        for _ in range(n_estimators):
-            self.trees.append(
-                ClassificationTree(
-                    min_samples_split=self.min_samples_split,
-                    min_impurity=min_gain,
-                    max_depth=self.max_depth))
+        self.trees = [
+            ClassificationTree(
+                min_samples_split=self.min_samples_split,
+                min_impurity=min_gain,
+                max_depth=self.max_depth,
+            )
+            for _ in range(n_estimators)
+        ]
 
     def fit(self, X, y):
         n_features = np.shape(X)[1]
@@ -407,17 +407,15 @@ class RandomForest():
             # 基于特征做出预测
             prediction = tree.predict(X[:, idx])
             y_preds[:, i] = prediction
-            
-        y_pred = []
-        # 对每个样本，选择最常见的类别作为预测
-        for sample_predictions in y_preds:
-            y_pred.append(np.bincount(sample_predictions.astype('int')).argmax())
-        return y_pred
+
+        return [
+            np.bincount(sample_predictions.astype('int')).argmax()
+            for sample_predictions in y_preds
+        ]
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
     
 #####----Adaboost----#######
@@ -472,7 +470,7 @@ class Adaboost():
                         tree.threshold = threshold
                         tree.feature_index = feature_i
                         min_error = error
-                        
+
             # 计算用于更新样本权值的 alpha 值，也是作为基分类器的系数。
             tree.alpha = 0.5 * math.log((1.0 - min_error) / (min_error + 1e-10))
             # 将所有样本预测默认值设置为 1
@@ -503,8 +501,7 @@ class Adaboost():
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
     
 #####----GBDT----#######
@@ -633,7 +630,7 @@ class GradientBoostingDecisionTree(object):
             y_pred = np.array([])
             for i in range(self.n_estimators):
                 update = np.multiply(self.weights[i, c], self.trees[i, c].predict(X))
-                y_pred = update if not y_pred.any() else y_pred + update
+                y_pred = y_pred + update if y_pred.any() else update
             Y_pred[:, c] = y_pred
         if not self.is_regression: 
             # 分类问题输出最可能类别
@@ -642,8 +639,7 @@ class GradientBoostingDecisionTree(object):
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
 
 
 class GradientBoostingRegressor(GradientBoostingDecisionTree):
@@ -714,8 +710,7 @@ class XGBoostRegressionTree(DecisionTree):
         # 计算叶节点权重
         gradient = self.loss.grad(y, y_pred).sum()
         hessian = self.loss.hess(y, y_pred).sum()
-        leaf_approximation = -gradient / (hessian + self.lambd)
-        return leaf_approximation
+        return -gradient / (hessian + self.lambd)
 
     def fit(self, X, y):
         self._impurity_calculation = self._gain_by_taylor
@@ -787,7 +782,7 @@ class XGBoost(object):
             y_pred = np.array([])
             for i in range(self.n_estimators):
                 update = np.multiply(self.weights[i, c], self.trees[i, c].predict(X))
-                y_pred = update if not y_pred.any() else y_pred + update
+                y_pred = y_pred + update if y_pred.any() else update
             Y_pred[:, c] = y_pred
         if not self.is_regression: 
             # 分类问题输出最可能类别
@@ -796,8 +791,7 @@ class XGBoost(object):
     
     def score(self, X, y):
         y_pred = self.predict(X)
-        accuracy = np.sum(y == y_pred, axis=0) / len(y)
-        return accuracy
+        return np.sum(y == y_pred, axis=0) / len(y)
     
     
 class XGBRegressor(XGBoost):
